@@ -23,7 +23,7 @@ import numpy as np
 import my_txtutils as txt
 tf.set_random_seed(0)
 
-tf.device('/device:GPU:0')
+# tf.device('/device:GPU:0')
 
 # model parameters
 #
@@ -47,10 +47,9 @@ NLAYERS = 3
 learning_rate = 0.001  # fixed learning rate
 dropout_pkeep = 0.8    # some dropout
 
-# load data, either shakespeare, or the Python source of Tensorflow itself
-shakedir = "shakespeare/*.txt"
-#shakedir = "../tensorflow/**/*.py"
-codetext, valitext, bookranges = txt.read_data_files(shakedir, validation=True)
+# load data
+inputsdir = "inputs/*"
+codetext, valitext, bookranges = txt.read_data_files(inputsdir, validation=True)
 
 # display some stats on the data
 epoch_size = len(codetext) // (BATCHSIZE * SEQLEN)
@@ -96,7 +95,7 @@ H = tf.identity(H, name='H')  # just to give it a name
 Yflat = tf.reshape(Yr, [-1, INTERNALSIZE])    # [ BATCHSIZE x SEQLEN, INTERNALSIZE ]
 Ylogits = layers.linear(Yflat, ALPHASIZE)     # [ BATCHSIZE x SEQLEN, ALPHASIZE ]
 Yflat_ = tf.reshape(Yo_, [-1, ALPHASIZE])     # [ BATCHSIZE x SEQLEN, ALPHASIZE ]
-loss = tf.nn.softmax_cross_entropy_with_logits(logits=Ylogits, labels=Yflat_)  # [ BATCHSIZE x SEQLEN ]
+loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=Ylogits, labels=Yflat_)  # [ BATCHSIZE x SEQLEN ]
 loss = tf.reshape(loss, [batchsize, -1])      # [ BATCHSIZE, SEQLEN ]
 Yo = tf.nn.softmax(Ylogits, name='Yo')        # [ BATCHSIZE x SEQLEN, ALPHASIZE ]
 Y = tf.argmax(Yo, 1)                          # [ BATCHSIZE x SEQLEN ]
@@ -132,7 +131,8 @@ progress = txt.Progress(DISPLAY_FREQ, size=111+2, msg="Training on next "+str(DI
 # init
 istate = np.zeros([BATCHSIZE, INTERNALSIZE*NLAYERS])  # initial zero input state
 init = tf.global_variables_initializer()
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+#sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+sess = tf.Session()
 sess.run(init)
 step = 0
 
@@ -170,12 +170,12 @@ for x, y_, epoch in txt.rnn_minibatch_sequencer(codetext, BATCHSIZE, SEQLEN, nb_
     # display a short text generated with the current weights and biases (every 150 batches)
     if step // 3 % _50_BATCHES == 0:
         txt.print_text_generation_header()
-        ry = np.array([[txt.convert_from_alphabet(ord("K"))]])
+        ry = np.array([[ord("K")]])
         rh = np.zeros([1, INTERNALSIZE * NLAYERS])
         for k in range(1000):
             ryo, rh = sess.run([Yo, H], feed_dict={X: ry, pkeep: 1.0, Hin: rh, batchsize: 1})
             rc = txt.sample_from_probabilities(ryo, topn=10 if epoch <= 1 else 2)
-            print(chr(txt.convert_to_alphabet(rc)), end="")
+            print(chr(rc), end="")
             ry = np.array([[rc]])
         txt.print_text_generation_footer()
 

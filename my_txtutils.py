@@ -18,51 +18,7 @@ import glob
 import sys
 
 # size of the alphabet that we work with
-ALPHASIZE = 98
-
-
-# Specification of the supported alphabet (subset of ASCII-7)
-# 10 line feed LF
-# 32-64 numbers and punctuation
-# 65-90 upper-case letters
-# 91-97 more punctuation
-# 97-122 lower-case letters
-# 123-126 more punctuation
-def convert_from_alphabet(a):
-    """Encode a character
-    :param a: one character
-    :return: the encoded value
-    """
-    if a == 9:
-        return 1
-    if a == 10:
-        return 127 - 30  # LF
-    elif 32 <= a <= 126:
-        return a - 30
-    else:
-        return 0  # unknown
-
-
-# encoded values:
-# unknown = 0
-# tab = 1
-# space = 2
-# all chars from 32 to 126 = c-30
-# LF mapped to 127-30
-def convert_to_alphabet(c, avoid_tab_and_lf=False):
-    """Decode a code point
-    :param c: code point
-    :param avoid_tab_and_lf: if True, tab and line feed characters are replaced by '\'
-    :return: decoded character
-    """
-    if c == 1:
-        return 32 if avoid_tab_and_lf else 9  # space instead of TAB
-    if c == 127 - 30:
-        return 92 if avoid_tab_and_lf else 10  # \ instead of LF
-    if 32 <= c + 30 <= 126:
-        return c + 30
-    else:
-        return 0  # unknown
+ALPHASIZE = 256
 
 
 def encode_text(s):
@@ -70,16 +26,15 @@ def encode_text(s):
     :param s: a text string
     :return: encoded list of code points
     """
-    return list(map(lambda a: convert_from_alphabet(ord(a)), s))
+    return list(map(lambda a: ord(a), s))
 
 
-def decode_to_text(c, avoid_tab_and_lf=False):
+def decode_to_text(c):
     """Decode an encoded string.
     :param c: encoded list of code points
-    :param avoid_tab_and_lf: if True, tab and line feed characters are replaced by '\'
-    :return:
+    :return: a text string
     """
-    return "".join(map(lambda a: chr(convert_to_alphabet(a, avoid_tab_and_lf)), c))
+    return "".join(map(lambda a: chr(a), c))
 
 
 def sample_from_probabilities(probabilities, topn=ALPHASIZE):
@@ -149,14 +104,16 @@ def print_learning_learned_comparison(X, Y, losses, bookranges, batch_loss, batc
     start_index_in_epoch = index % (epoch_size * batch_size * sequence_len)
     for k in range(batch_size):
         index_in_epoch = index % (epoch_size * batch_size * sequence_len)
-        decx = decode_to_text(X[k], avoid_tab_and_lf=True)
-        decy = decode_to_text(Y[k], avoid_tab_and_lf=True)
+        decx = decode_to_text(X[k])
+        decy = decode_to_text(Y[k])
         bookname = find_book(index_in_epoch, bookranges)
         formatted_bookname = "{: <10.40}".format(bookname)  # min 10 and max 40 chars
         epoch_string = "{:4d}".format(index) + " (epoch {}) ".format(epoch)
         loss_string = "loss: {:.5f}".format(losses[k])
-        print_string = epoch_string + formatted_bookname + " │ {} │ {} │ {}"
-        print(print_string.format(decx, decy, loss_string))
+        # print_string = epoch_string + formatted_bookname + " │ {} │ {} │ {}"
+        print_string = epoch_string + formatted_bookname + " │ {}"
+        # print(print_string.format(decx, decy, loss_string))
+        print(print_string.format(loss_string))
         index += sequence_len
     # box formatting characters:
     # │ \u2502
@@ -246,10 +203,11 @@ def read_data_files(directory, validation=True):
     bookranges = []
     shakelist = glob.glob(directory, recursive=True)
     for shakefile in shakelist:
-        shaketext = open(shakefile, "r")
+        shaketext = open(shakefile, "rb")
         print("Loading file " + shakefile)
         start = len(codetext)
-        codetext.extend(encode_text(shaketext.read()))
+        #codetext.extend(encode_text(shaketext.read()))
+        codetext.extend(shaketext.read())
         end = len(codetext)
         bookranges.append({"start": start, "end": end, "name": shakefile.rsplit("/", 1)[-1]})
         shaketext.close()
