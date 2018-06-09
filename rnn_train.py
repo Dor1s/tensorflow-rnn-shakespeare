@@ -23,6 +23,8 @@ import numpy as np
 import my_txtutils as txt
 tf.set_random_seed(0)
 
+tf.device('/device:GPU:0')
+
 # model parameters
 #
 # Usage:
@@ -130,7 +132,7 @@ progress = txt.Progress(DISPLAY_FREQ, size=111+2, msg="Training on next "+str(DI
 # init
 istate = np.zeros([BATCHSIZE, INTERNALSIZE*NLAYERS])  # initial zero input state
 init = tf.global_variables_initializer()
-sess = tf.Session()
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 sess.run(init)
 step = 0
 
