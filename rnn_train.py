@@ -175,8 +175,7 @@ for x, y_, epoch in txt.rnn_minibatch_sequencer(codetext, BATCHSIZE, SEQLEN, nb_
         for k in range(1000):
             ryo, rh = sess.run([Yo, H], feed_dict={X: ry, pkeep: 1.0, Hin: rh, batchsize: 1})
             rc = txt.sample_from_probabilities(ryo, topn=10 if epoch <= 1 else 2)
-            print(chr(rc), end="")
-            print(chr(rc).encode('hex'), end="")
+            print(chr(rc).encode("utf-8").hex(), end="")
             ry = np.array([[rc]])
         txt.print_text_generation_footer()
 

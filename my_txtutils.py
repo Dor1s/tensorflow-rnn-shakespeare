@@ -270,7 +270,8 @@ def print_validation_header(validation_start, bookranges):
     #     if i < len(bookranges)-1:
     #         books += ", "
     # print("{: <60}".format("Validating on " + books), flush=True)
-    print("{: <60}".format(("Validating on %d books" % len(bookranges)), flush=True)
+    print("{: <60}".format("Validating on %d books" % len(bookranges)), flush=True)
+
 
 
 def print_validation_stats(loss, accuracy):
