@@ -16,12 +16,23 @@
 import tensorflow as tf
 from tensorflow.contrib import layers
 from tensorflow.contrib import rnn  # rnn stuff temporarily in contrib, moving back to code in TF 1.1
+from tensorflow.contrib import tpu
+from tensorflow.contrib.cluster_resolver import TPUClusterResolver
+# from tensorflow.contrib.tpu.python.tpu import tpu_config
 import os
 import time
 import math
 import numpy as np
 import my_txtutils as txt
 tf.set_random_seed(0)
+
+# tf.flags.DEFINE_integer("num_shards", 8, "Number of shards (TPU chips).")
+# FLAGS = tf.flags.FLAGS
+# run_config = tf.contrib.tpu.RunConfig(
+#   session_config=tf.ConfigProto(
+#         allow_soft_placement=True, log_device_placement=True),
+#   tpu_config=tf.contrib.tpu.TPUConfig(num_shards=FLAGS.num_shards))
+
 
 # model parameters
 #
@@ -94,7 +105,7 @@ H = tf.identity(H, name='H')  # just to give it a name
 Yflat = tf.reshape(Yr, [-1, INTERNALSIZE])    # [ BATCHSIZE x SEQLEN, INTERNALSIZE ]
 Ylogits = layers.linear(Yflat, ALPHASIZE)     # [ BATCHSIZE x SEQLEN, ALPHASIZE ]
 Yflat_ = tf.reshape(Yo_, [-1, ALPHASIZE])     # [ BATCHSIZE x SEQLEN, ALPHASIZE ]
-loss = tf.nn.softmax_cross_entropy_with_logits(logits=Ylogits, labels=Yflat_)  # [ BATCHSIZE x SEQLEN ]
+loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=Ylogits, labels=Yflat_)  # [ BATCHSIZE x SEQLEN ]
 loss = tf.reshape(loss, [batchsize, -1])      # [ BATCHSIZE, SEQLEN ]
 Yo = tf.nn.softmax(Ylogits, name='Yo')        # [ BATCHSIZE x SEQLEN, ALPHASIZE ]
 Y = tf.argmax(Yo, 1)                          # [ BATCHSIZE x SEQLEN ]
@@ -118,8 +129,8 @@ validation_writer = tf.summary.FileWriter("log/" + timestamp + "-validation")
 
 # Init for saving models. They will be saved into a directory named 'checkpoints'.
 # Only the last checkpoint is kept.
-if not os.path.exists("checkpoints"):
-    os.mkdir("checkpoints")
+# if not os.path.exists("checkpoints"):
+#     os.mkdir("checkpoints")
 saver = tf.train.Saver(max_to_keep=1000)
 
 # for display: init the progress bar
@@ -130,9 +141,16 @@ progress = txt.Progress(DISPLAY_FREQ, size=111+2, msg="Training on next "+str(DI
 # init
 istate = np.zeros([BATCHSIZE, INTERNALSIZE*NLAYERS])  # initial zero input state
 init = tf.global_variables_initializer()
-sess = tf.Session()
+tpu_grpc_url = TPUClusterResolver(tpu=[os.environ['TPU_NAME']]).get_master()
+sess = tf.Session(tpu_grpc_url)
+sess.run(tpu.initialize_system())
 sess.run(init)
 step = 0
+
+# tpu_estimator = tf.contrib.tpu.TPUEstimator(
+#     model_fn=train_step,
+#     config = run_config,
+#     use_tpu=True)
 
 # training loop
 for x, y_, epoch in txt.rnn_minibatch_sequencer(codetext, BATCHSIZE, SEQLEN, nb_epochs=10):
@@ -179,7 +197,7 @@ for x, y_, epoch in txt.rnn_minibatch_sequencer(codetext, BATCHSIZE, SEQLEN, nb_
 
     # save a checkpoint (every 500 batches)
     if step // 10 % _50_BATCHES == 0:
-        saved_file = saver.save(sess, 'checkpoints/rnn_train_' + timestamp, global_step=step)
+        saved_file = saver.save(sess, 'gs://tpu-cf-test/checkpoints/rnn_train_' + timestamp, global_step=step)
         print("Saved file: " + saved_file)
 
     # display progress bar
@@ -188,6 +206,8 @@ for x, y_, epoch in txt.rnn_minibatch_sequencer(codetext, BATCHSIZE, SEQLEN, nb_
     # loop state around
     istate = ostate
     step += BATCHSIZE * SEQLEN
+
+sess.run(tpu.shutdown_system())
 
 # all runs: SEQLEN = 30, BATCHSIZE = 100, ALPHASIZE = 98, INTERNALSIZE = 512, NLAYERS = 3
 # run 1477669632 decaying learning rate 0.001-0.0001-1e7 dropout 0.5: not good
