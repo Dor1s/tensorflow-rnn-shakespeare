@@ -202,15 +202,17 @@ def read_data_files(directory, validation=True):
     codetext = []
     bookranges = []
     shakelist = glob.glob(directory, recursive=True)
+    print("Loading files...")
     for shakefile in shakelist:
         shaketext = open(shakefile, "rb")
-        print("Loading file " + shakefile)
+        # print("Loading file " + shakefile)
         start = len(codetext)
         #codetext.extend(encode_text(shaketext.read()))
         codetext.extend(shaketext.read())
         end = len(codetext)
         bookranges.append({"start": start, "end": end, "name": shakefile.rsplit("/", 1)[-1]})
         shaketext.close()
+    print("DONE loading files")
 
     if len(bookranges) == 0:
         sys.exit("No training data has been found. Aborting.")
@@ -261,13 +263,14 @@ def print_data_stats(datalen, valilen, epoch_size):
 
 
 def print_validation_header(validation_start, bookranges):
-    bookindex = find_book_index(validation_start, bookranges)
-    books = ''
-    for i in range(bookindex, len(bookranges)):
-        books += bookranges[i]["name"]
-        if i < len(bookranges)-1:
-            books += ", "
-    print("{: <60}".format("Validating on " + books), flush=True)
+    # bookindex = find_book_index(validation_start, bookranges)
+    # books = ''
+    # for i in range(bookindex, len(bookranges)):
+    #     books += bookranges[i]["name"]
+    #     if i < len(bookranges)-1:
+    #         books += ", "
+    # print("{: <60}".format("Validating on " + books), flush=True)
+    print("{: <60}".format(("Validating on %d books" % len(bookranges)), flush=True)
 
 
 def print_validation_stats(loss, accuracy):
