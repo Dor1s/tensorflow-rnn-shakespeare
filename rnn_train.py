@@ -40,7 +40,7 @@ tf.set_random_seed(0)
 #         training data (shakedir = "shakespeare/t*.txt" for example)
 #
 SEQLEN = 30
-BATCHSIZE = 200
+BATCHSIZE = 100
 ALPHASIZE = txt.ALPHASIZE
 INTERNALSIZE = 512
 NLAYERS = 3
@@ -190,6 +190,9 @@ for x, y_, epoch in txt.rnn_minibatch_sequencer(codetext, BATCHSIZE, SEQLEN, nb_
     # loop state around
     istate = ostate
     step += BATCHSIZE * SEQLEN
+
+saved_file = saver.save(sess, 'checkpoints/rnn_train_' + timestamp)
+print("Saved file: " + saved_file)
 
 # all runs: SEQLEN = 30, BATCHSIZE = 100, ALPHASIZE = 98, INTERNALSIZE = 512, NLAYERS = 3
 # run 1477669632 decaying learning rate 0.001-0.0001-1e7 dropout 0.5: not good
